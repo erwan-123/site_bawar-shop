@@ -20,7 +20,7 @@ import {
 const NAV_LINKS = [
   { label: "Accueil", href: "/", icon: HiOutlineHome },
 //   { label: "Applications", href: "/applications", icon: HiOutlineDevicePhoneMobile },
-  { label: "à propos", href: "/à propos", icon: HiOutlineFolder },
+  { label: "à propos", href: "/apropos", icon: HiOutlineFolder },
   { label: "Nouveautés", href: "/nouveautes", icon: HiOutlineSparkles },
   { label: "Contact", href: "/contact", icon: HiOutlineEnvelope },
 ];
@@ -112,7 +112,7 @@ export default function Navbar() {
               </motion.span>
 
               <span className="text-xl font-extrabold tracking-tight text-[#0B1F3A] sm:text-2xl">
-                Basar Shop
+                Bazar Shop
               </span>
             </Link>
 
