@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
@@ -11,15 +11,15 @@ import {
   type Variants,
 } from "motion/react";
 import {
-  LuArrowDown,
-  LuArrowRight,
-  LuDownload,
-  LuSparkles,
+  LuArrowDown as ArrowDown,
+  LuArrowRight as ArrowRight,
+  LuDownload as Download,
+  LuSparkles as Sparkles,
 } from "react-icons/lu";
 
-/* ================================================================== */
-/*  Données                                                            */
-/* ================================================================== */
+/* ------------------------------------------------------------------ */
+/* Données des applications                                            */
+/* ------------------------------------------------------------------ */
 
 type AppItem = {
   name: string;
@@ -27,6 +27,7 @@ type AppItem = {
   icon: string;
   color: string;
   description: string;
+  image?: string;
 };
 
 const apps: AppItem[] = [
@@ -35,33 +36,25 @@ const apps: AppItem[] = [
     category: "Communication",
     icon: "💬",
     color: "from-blue-500 to-indigo-600",
-    description: "Restez connecté, simplement.",
+    description: "Restez connecté.",
   },
   {
     name: "Bazar Finance",
     category: "Finance",
     icon: "💳",
     color: "from-cyan-400 to-blue-600",
-    description: "Vos finances à portée de main.",
+    description: "Vos finances.",
   },
   {
     name: "Bazar Play",
     category: "Divertissement",
     icon: "▶",
     color: "from-violet-500 to-fuchsia-600",
-    description: "Découvrez votre prochain favori.",
+    description: "Votre favori.",
   },
 ];
 
-type Slide = {
-  kicker: string;
-  line1: string;
-  line2: string;
-  accent: string;
-  glow: string;
-};
-
-const slides: Slide[] = [
+const slides = [
   {
     kicker: "Communication",
     line1: "Restez connecté,",
@@ -85,16 +78,16 @@ const slides: Slide[] = [
   },
 ];
 
-/* ================================================================== */
-/*  Variants Motion                                                    */
-/* ================================================================== */
+/* ------------------------------------------------------------------ */
+/* Variants d'animation                                                */
+/* ------------------------------------------------------------------ */
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 const wordContainer: Variants = {
   hidden: {},
   visible: {
-    transition: { staggerChildren: 0.055, delayChildren: 0.1 },
+    transition: { staggerChildren: 0.06, delayChildren: 0.1 },
   },
   exit: {
     transition: { staggerChildren: 0.03, staggerDirection: -1 },
@@ -114,158 +107,14 @@ const wordItem: Variants = {
     opacity: 0,
     y: "-0.5em",
     filter: "blur(8px)",
-    transition: { duration: 0.35, ease: "easeIn" },
+    transition: { duration: 0.35 },
   },
 };
 
-/* ================================================================== */
-/*  Écran de chargement                                                */
-/* ================================================================== */
-
-function LoadingScreen({ onDone }: { onDone: () => void }) {
-  const reducedMotion = useReducedMotion();
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    let raf = 0;
-    let mounted = true;
-
-    const start = performance.now();
-    const MIN_DURATION = reducedMotion ? 400 : 1900;
-    const TARGET = 92;
-
-    const tick = (now: number) => {
-      if (!mounted) return;
-      const t = Math.min((now - start) / MIN_DURATION, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setProgress(Math.round(eased * TARGET));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-
-    const finish = () => {
-      if (!mounted) return;
-      setProgress(100);
-      setTimeout(onDone, reducedMotion ? 120 : 520);
-    };
-
-    const delay = new Promise<void>((resolve) =>
-      setTimeout(resolve, MIN_DURATION)
-    );
-    const loaded =
-      document.readyState === "complete"
-        ? Promise.resolve()
-        : new Promise<void>((resolve) =>
-            window.addEventListener("load", () => resolve(), { once: true })
-          );
-
-    Promise.all([delay, loaded]).then(finish);
-
-    return () => {
-      mounted = false;
-      cancelAnimationFrame(raf);
-    };
-  }, [onDone, reducedMotion]);
-
+function Words({ text }: { text: string }) {
   return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white"
-      initial={{ opacity: 1 }}
-      exit={
-        reducedMotion
-          ? { opacity: 0 }
-          : { opacity: 0, filter: "blur(12px)", scale: 1.04 }
-      }
-      transition={{ duration: reducedMotion ? 0.2 : 0.7, ease: EASE }}
-    >
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        animate={
-          reducedMotion
-            ? {}
-            : { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }
-        }
-        transition={{ duration: 16, repeat: Infinity, ease: "linear" }}
-        style={{
-          backgroundImage:
-            "radial-gradient(50% 50% at 30% 30%, rgba(219,234,254,0.9) 0%, transparent 60%), radial-gradient(45% 45% at 75% 70%, rgba(224,231,255,0.8) 0%, transparent 60%)",
-          backgroundSize: "160% 160%",
-        }}
-      />
-
-      <div className="relative mb-10 flex items-center justify-center">
-        <motion.span
-          className="absolute h-24 w-24 rounded-full border border-blue-200"
-          animate={reducedMotion ? {} : { rotate: 360 }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-        />
-        <motion.span
-          className="absolute h-24 w-24 rounded-full border border-dashed border-indigo-300"
-          animate={reducedMotion ? {} : { rotate: -360 }}
-          transition={{ duration: 9, repeat: Infinity, ease: "linear" }}
-        />
-        <motion.div
-          className="grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-500 text-2xl text-white shadow-[0_18px_45px_rgba(37,99,235,0.35)]"
-          animate={
-            reducedMotion
-              ? {}
-              : { scale: [1, 1.08, 1], rotate: [0, 4, -4, 0] }
-          }
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        >
-          ✦
-        </motion.div>
-      </div>
-
-      <motion.p
-        className="mb-1 text-lg font-extrabold tracking-tight text-[#102653]"
-        initial={reducedMotion ? false : { opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.15, ease: EASE }}
-      >
-        Bazar Shop
-      </motion.p>
-      <motion.p
-        className="mb-8 text-xs font-medium uppercase tracking-[0.3em] text-blue-600"
-        initial={reducedMotion ? false : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-      >
-        Chargement
-      </motion.p>
-
-      <div className="relative h-1 w-56 overflow-hidden rounded-full bg-slate-200">
-        <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500"
-          style={{ width: `${progress}%` }}
-          transition={{ duration: 0.2, ease: "linear" }}
-        />
-      </div>
-
-      <p className="mt-3 text-xs font-semibold tabular-nums text-slate-500">
-        {progress}%
-      </p>
-    </motion.div>
-  );
-}
-
-/* ================================================================== */
-/*  Composant mot animé                                                */
-/* ================================================================== */
-
-function AnimatedWords({
-  text,
-  className = "",
-}: {
-  text: string;
-  className?: string;
-}) {
-  const words = useMemo(() => text.split(" "), [text]);
-
-  return (
-    <span className={`inline-flex flex-wrap ${className}`}>
-      {words.map((word, i) => (
+    <span className="inline-flex flex-wrap">
+      {text.split(" ").map((word, i) => (
         <motion.span
           key={`${word}-${i}`}
           variants={wordItem}
@@ -278,85 +127,233 @@ function AnimatedWords({
   );
 }
 
-/* ================================================================== */
-/*  TILT CARD — inclinaison 3D suivant la souris                       */
-/* ================================================================== */
+/* ------------------------------------------------------------------ */
+/* Écran de chargement animé                                           */
+/* ------------------------------------------------------------------ */
 
-function useTilt(reducedMotion: boolean | null, strength = 14) {
-  const ref = useRef<HTMLDivElement>(null);
+function Loader({ onDone }: { onDone: () => void }) {
+  const reduced = useReducedMotion();
+  const [progress, setProgress] = useState(0);
+  const [activeApp, setActiveApp] = useState(0);
 
-  /* Positions normalisées de la souris : -0.5 → 0.5 */
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+  useEffect(() => {
+    let raf = 0;
+    let finishTimer: ReturnType<typeof setTimeout> | undefined;
+    let loadHandler: (() => void) | undefined;
 
-  /* Ressort pour un retour fluide quand la souris sort */
-  const springConfig = { stiffness: 220, damping: 20, mass: 0.6 };
-  const rotateX = useSpring(
-    useTransform(y, [-0.5, 0.5], [strength, -strength]),
-    springConfig
+    let pageLoaded = document.readyState === "complete";
+
+    const start = performance.now();
+    const duration = reduced ? 500 : 2400;
+
+    const tick = (now: number) => {
+      const t = Math.min((now - start) / duration, 1);
+      setProgress(Math.round((1 - Math.pow(1 - t, 3)) * 94));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    const finishWhenReady = () => {
+      if (!pageLoaded) return;
+      finishTimer = setTimeout(() => {
+        setProgress(100);
+        finishTimer = setTimeout(onDone, reduced ? 120 : 450);
+      }, Math.max(0, duration - (performance.now() - start)));
+    };
+
+    if (!pageLoaded) {
+      loadHandler = () => {
+        pageLoaded = true;
+        finishWhenReady();
+      };
+      window.addEventListener("load", loadHandler, { once: true });
+    } else {
+      finishWhenReady();
+    }
+
+    return () => {
+      cancelAnimationFrame(raf);
+      if (finishTimer) clearTimeout(finishTimer);
+      if (loadHandler) window.removeEventListener("load", loadHandler);
+    };
+  }, [onDone, reduced]);
+
+  useEffect(() => {
+    if (reduced || apps.length < 2) return;
+    const id = setInterval(() => {
+      setActiveApp((current) => (current + 1) % apps.length);
+    }, 850);
+    return () => clearInterval(id);
+  }, [reduced]);
+
+  const app = apps[activeApp];
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-white px-5"
+      initial={{ opacity: 1 }}
+      exit={
+        reduced
+          ? { opacity: 0 }
+          : { opacity: 0, filter: "blur(10px)", scale: 1.025 }
+      }
+      transition={{ duration: reduced ? 0.2 : 0.55, ease: EASE }}
+      role="status"
+      aria-label="Chargement de Bazar Shop"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 35%, rgba(219,234,254,0.8), transparent 48%), radial-gradient(circle at 15% 85%, rgba(224,231,255,0.55), transparent 38%)",
+        }}
+      />
+
+      <div className="relative flex w-full max-w-sm flex-col items-center">
+        <motion.div
+          className="mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-500 text-2xl text-white shadow-[0_18px_45px_rgba(37,99,235,0.3)]"
+          animate={
+            reduced ? {} : { scale: [1, 1.07, 1], rotate: [0, 4, -4, 0] }
+          }
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+        >
+          ✦
+        </motion.div>
+
+        <p className="text-xl font-extrabold tracking-tight text-[#102653]">
+          Bazar Shop
+        </p>
+
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-blue-600">
+          Vos applications, au même endroit
+        </p>
+
+        <div className="relative mt-8 flex h-40 w-full items-center justify-center">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={app.name}
+              initial={
+                reduced
+                  ? { opacity: 0 }
+                  : { opacity: 0, y: 18, scale: 0.88, rotate: -3 }
+              }
+              animate={{ opacity: 1, y: 0, scale: 1, rotate: 0 }}
+              exit={
+                reduced
+                  ? { opacity: 0 }
+                  : { opacity: 0, y: -12, scale: 0.92, rotate: 3 }
+              }
+              transition={{ duration: reduced ? 0.15 : 0.45, ease: EASE }}
+              className="absolute flex w-56 items-center gap-3 rounded-2xl border border-blue-100 bg-white/90 p-4 shadow-[0_18px_55px_rgba(15,35,80,0.12)] backdrop-blur"
+            >
+              {app.image ? (
+                <img
+                  src={app.image}
+                  alt={`Capture de ${app.name}`}
+                  className="h-14 w-14 rounded-xl object-cover"
+                />
+              ) : (
+                <div
+                  className={`grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${app.color} text-2xl text-white shadow-md`}
+                >
+                  {app.icon}
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold text-slate-900">
+                  {app.name}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">{app.category}</p>
+                <p className="mt-1 text-[11px] text-blue-700">
+                  {app.description}
+                </p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <p className="mt-3 text-xs font-medium text-slate-500">
+          Préparation de votre expérience…
+        </p>
+
+        <div className="mt-4 h-1.5 w-56 overflow-hidden rounded-full bg-slate-200">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+
+        <p className="mt-2 text-xs font-semibold tabular-nums text-slate-500">
+          {progress}%
+        </p>
+      </div>
+    </motion.div>
   );
-  const rotateY = useSpring(
-    useTransform(x, [-0.5, 0.5], [-strength, strength]),
-    springConfig
-  );
-
-  /* Reflet lumineux qui suit le curseur */
-  const glareX = useTransform(x, [-0.5, 0.5], ["25%", "75%"]);
-  const glareY = useTransform(y, [-0.5, 0.5], ["25%", "75%"]);
-
-  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (reducedMotion || !ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    x.set((e.clientX - rect.left) / rect.width - 0.5);
-    y.set((e.clientY - rect.top) / rect.height - 0.5);
-  };
-
-  const onMouseLeave = () => {
-    x.set(0);
-    y.set(0);
-  };
-
-  return { ref, rotateX, rotateY, glareX, glareY, onMouseMove, onMouseLeave };
 }
 
-function FloatingAppCard({
+/* ------------------------------------------------------------------ */
+/* Cartes 3D inclinées                                                 */
+/* ------------------------------------------------------------------ */
+
+function TiltCard({
   app,
   className = "",
   delay = 0,
-  reducedMotion,
+  reduced,
 }: {
   app: AppItem;
   className?: string;
   delay?: number;
-  reducedMotion: boolean | null;
+  reduced: boolean | null;
 }) {
-  const {
-    ref,
-    rotateX,
-    rotateY,
-    glareX,
-    glareY,
-    onMouseMove,
-    onMouseLeave,
-  } = useTilt(reducedMotion);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const springConfig = { stiffness: 220, damping: 20, mass: 0.6 };
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [16, -16]), springConfig);
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-16, 16]), springConfig);
+
+  const glareX = useTransform(mouseX, [-0.5, 0.5], ["20%", "80%"]);
+  const glareY = useTransform(mouseY, [-0.5, 0.5], ["20%", "80%"]);
+
+  /* Typage explicite du tuple pour TS strict */
+  const glare = useTransform<number, string>(
+    [glareX, glareY] as const,
+    ([gx, gy]: [string, string]) =>
+      `radial-gradient(circle at ${gx} ${gy}, rgba(255,255,255,0.75) 0%, transparent 55%)`
+  );
+
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (reduced || !ref.current) return;
+    const r = ref.current.getBoundingClientRect();
+    mouseX.set((e.clientX - r.left) / r.width - 0.5);
+    mouseY.set((e.clientY - r.top) / r.height - 0.5);
+  };
+
+  const onMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
 
   return (
     <motion.div
       className={`absolute ${className}`}
-      initial={reducedMotion ? false : { opacity: 0, y: 30, scale: 0.9 }}
+      initial={reduced ? false : { opacity: 0, y: 30, scale: 0.9 }}
       animate={
-        reducedMotion
-          ? { opacity: 1 }
-          : { opacity: 1, y: [0, -12, 0], scale: 1 }
+        reduced ? { opacity: 1 } : { opacity: 1, y: [0, -10, 0], scale: 1 }
       }
       transition={
-        reducedMotion
+        reduced
           ? { duration: 0.2 }
           : {
               opacity: { duration: 0.7, delay },
               scale: { duration: 0.7, delay, ease: EASE },
               y: {
-                duration: 5.5,
+                duration: 5,
                 repeat: Infinity,
                 ease: "easeInOut",
                 delay: delay + 0.4,
@@ -365,7 +362,6 @@ function FloatingAppCard({
       }
       style={{ perspective: 800 }}
     >
-      {/* Wrapper tilt — capte la souris sans interférer avec l'animation flottante */}
       <motion.div
         ref={ref}
         onMouseMove={onMouseMove}
@@ -376,43 +372,31 @@ function FloatingAppCard({
           transformPerspective: 800,
           transformStyle: "preserve-3d",
         }}
-        className="group relative w-44 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-[0_18px_55px_rgba(15,35,80,0.15)] backdrop-blur-xl transition-shadow duration-300 hover:shadow-[0_28px_70px_rgba(15,35,80,0.28)] sm:w-48"
+        className="group relative w-40 cursor-pointer rounded-2xl border border-white/70 bg-white/90 p-3 shadow-[0_18px_55px_rgba(15,35,80,0.15)] backdrop-blur-xl transition-shadow duration-300 hover:shadow-[0_30px_70px_rgba(15,35,80,0.28)] sm:w-44"
       >
-        {/* Reflet dynamique */}
         <motion.div
-          aria-hidden="true"
+          aria-hidden
           className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         >
-          <motion.div
-            className="absolute -inset-1"
-            style={{
-              background: useTransform(
-                [glareX, glareY],
-                ([gx, gy]) =>
-                  `radial-gradient(circle at ${gx} ${gy}, rgba(255,255,255,0.65) 0%, transparent 55%)`
-              ),
-            }}
-          />
+          <motion.div className="absolute -inset-1" style={{ background: glare }} />
         </motion.div>
 
-        {/* Contenu en profondeur (translateZ pour détacher les éléments) */}
-        <div
-          style={{ transform: "translateZ(28px)", transformStyle: "preserve-3d" }}
-          className="relative"
-        >
+        <div style={{ transform: "translateZ(30px)" }} className="relative">
           <div
-            className={`mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${app.color} text-xl text-white shadow-md`}
+            className={`mb-2 grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br ${app.color} text-lg text-white shadow-md`}
           >
             {app.icon}
           </div>
+
           <p className="text-sm font-bold text-slate-900">{app.name}</p>
-          <p className="mt-0.5 text-xs text-slate-500">{app.category}</p>
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <span className="text-[11px] text-slate-500">
+          <p className="text-xs text-slate-500">{app.category}</p>
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-[10px] text-slate-500">
               {app.description}
             </span>
-            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-700 transition-colors group-hover:bg-blue-100">
-              <LuDownload size={13} />
+            <span className="grid h-6 w-6 place-items-center rounded-full bg-blue-50 text-blue-700">
+              <Download size={12} />
             </span>
           </div>
         </div>
@@ -421,111 +405,94 @@ function FloatingAppCard({
   );
 }
 
-/* ================================================================== */
-/*  Hero                                                               */
-/* ================================================================== */
+/* ------------------------------------------------------------------ */
+/* Hero Bazar Shop                                                     */
+/* ------------------------------------------------------------------ */
 
 export default function BazarShopHero() {
-  const reducedMotion = useReducedMotion();
+  const reduced = useReducedMotion();
+
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [loading, setLoading] = useState(true);
   const [ready, setReady] = useState(false);
 
-  const SLIDE_DURATION = 5200;
+  const handleLoaderDone = useCallback(() => {
+    setLoading(false);
+  }, []);
+
+  const DUR = 5000;
 
   useEffect(() => {
-    if (reducedMotion || paused || loading) return;
-    const id = setTimeout(
-      () => setActive((i) => (i + 1) % slides.length),
-      SLIDE_DURATION
-    );
+    if (reduced || paused || loading) return;
+    const id = setTimeout(() => {
+      setActive((i) => (i + 1) % slides.length);
+    }, DUR);
     return () => clearTimeout(id);
-  }, [active, reducedMotion, paused, loading]);
+  }, [active, reduced, paused, loading]);
 
   const slide = slides[active];
 
   return (
     <>
       <AnimatePresence>
-        {loading && <LoadingScreen onDone={() => setLoading(false)} />}
+        {loading && <Loader onDone={handleLoaderDone} />}
       </AnimatePresence>
 
       <motion.section
-        className="relative isolate flex min-h-[760px] items-center overflow-hidden bg-white text-slate-900"
+        id="accueil"
+        className="relative isolate flex min-h-[720px] items-center overflow-hidden bg-white pt-24 text-slate-900"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
-        initial={false}
-        animate={
-          loading ? { opacity: 0, scale: 0.985 } : { opacity: 1, scale: 1 }
-        }
-        transition={{ duration: reducedMotion ? 0.2 : 0.9, ease: EASE }}
+        animate={loading ? { opacity: 0 } : { opacity: 1 }}
+        transition={{ duration: reduced ? 0.2 : 0.8, ease: EASE }}
         onAnimationComplete={() => {
           if (!loading) setReady(true);
         }}
       >
         <motion.div
-          aria-hidden="true"
+          aria-hidden
           className="pointer-events-none absolute inset-0 -z-10"
           animate={
-            reducedMotion
+            reduced
               ? {}
               : { backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"] }
           }
           transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
           style={{
             backgroundImage:
-              "radial-gradient(55% 55% at 15% 20%, rgba(219,234,254,0.85) 0%, transparent 60%), radial-gradient(50% 50% at 85% 10%, rgba(224,231,255,0.75) 0%, transparent 60%), radial-gradient(60% 60% at 75% 95%, rgba(186,230,253,0.6) 0%, transparent 60%)",
+              "radial-gradient(55% 55% at 15% 20%, rgba(219,234,254,0.85) 0%, transparent 60%), radial-gradient(50% 50% at 85% 10%, rgba(224,231,255,0.75) 0%, transparent 60%)",
             backgroundSize: "180% 180%",
           }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 opacity-[0.04] [background-image:radial-gradient(#102653_1px,transparent_1px)] [background-size:26px_26px]"
         />
 
         <AnimatePresence>
           <motion.div
             key={`glow-${active}`}
-            aria-hidden="true"
+            aria-hidden
             className="pointer-events-none absolute -right-40 top-1/4 -z-10 h-[34rem] w-[34rem] rounded-full blur-[120px]"
             style={{ background: slide.glow }}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 1.2, ease: EASE }}
+            transition={{ duration: 1, ease: EASE }}
           />
         </AnimatePresence>
 
-        <div className="mx-auto grid w-full max-w-7xl items-center gap-14 px-6 py-20 lg:grid-cols-[1.05fr_1fr] lg:px-10">
-          {/* ================= Colonne texte ================= */}
+        <div className="mx-auto grid w-full max-w-7xl items-center gap-14 px-6 py-16 lg:grid-cols-[1.05fr_1fr] lg:px-10">
+          {/* Texte */}
           <div className="relative z-10 max-w-xl">
             <motion.div
-              initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+              initial={reduced ? false : { opacity: 0, y: 16 }}
               animate={ready ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.7, ease: EASE }}
-              className="mb-7 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/80 px-4 py-2 text-sm font-medium text-blue-900 shadow-sm backdrop-blur"
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white/80 px-4 py-2 text-sm font-medium text-blue-900 shadow-sm"
             >
-              <motion.span
-                animate={
-                  reducedMotion
-                    ? {}
-                    : { rotate: [0, 18, -12, 0], scale: [1, 1.2, 1] }
-                }
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="inline-flex"
-              >
-                <LuSparkles size={15} className="text-blue-600" />
-              </motion.span>
+              <Sparkles size={15} className="text-blue-600" />
               Vos prochaines applications préférées
             </motion.div>
 
-            <div className="relative min-h-[280px] sm:min-h-[320px] lg:min-h-[360px]">
+            <div className="relative min-h-[260px] sm:min-h-[300px]">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={active}
@@ -536,29 +503,18 @@ export default function BazarShopHero() {
                   className="absolute inset-0"
                   style={{ perspective: 800 }}
                 >
-                  <motion.p
-                    variants={{
-                      hidden: { opacity: 0, x: -20 },
-                      visible: {
-                        opacity: 1,
-                        x: 0,
-                        transition: { duration: 0.6, ease: EASE },
-                      },
-                      exit: { opacity: 0, x: -10 },
-                    }}
-                    className="mb-4 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.32em] text-blue-600"
-                  >
+                  <p className="mb-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.3em] text-blue-600">
                     <span className="h-px w-8 bg-blue-300" />
                     {slide.kicker}
-                  </motion.p>
+                  </p>
 
-                  <h1 className="text-[2.75rem] font-extrabold leading-[1.04] tracking-tight text-[#102653] sm:text-6xl lg:text-[4.25rem]">
-                    <AnimatedWords text={slide.line1} />
+                  <h1 className="text-5xl font-extrabold leading-[1.05] tracking-tight text-[#102653] sm:text-6xl lg:text-7xl">
+                    <Words text={slide.line1} />
                     <br />
                     <span
                       className={`bg-gradient-to-r ${slide.accent} bg-clip-text text-transparent`}
                     >
-                      <AnimatedWords text={slide.line2} />
+                      <Words text={slide.line2} />
                     </span>
                   </h1>
                 </motion.div>
@@ -566,17 +522,17 @@ export default function BazarShopHero() {
             </div>
 
             <motion.p
-              initial={reducedMotion ? false : { opacity: 0, y: 18 }}
+              initial={reduced ? false : { opacity: 0, y: 18 }}
               animate={ready ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.2, ease: EASE }}
               className="mt-6 max-w-lg text-lg leading-8 text-slate-600"
             >
               Bienvenue sur Bazar Shop, votre espace pour découvrir des
-              applications mobiles pratiques, innovantes et pensées pour vous
-              simplifier la vie.
+              applications mobiles pratiques et pensées pour vous simplifier
+              la vie.
             </motion.p>
 
-            <div className="mt-7 flex items-center gap-2.5" aria-hidden="true">
+            <div className="mt-6 flex items-center gap-2.5">
               {slides.map((_, i) => (
                 <button
                   key={i}
@@ -584,8 +540,8 @@ export default function BazarShopHero() {
                     setActive(i);
                     setPaused(false);
                   }}
-                  aria-label={`Aller au slide ${i + 1}`}
-                  className="relative h-1 overflow-hidden rounded-full bg-slate-200 transition-all duration-300"
+                  aria-label={`Slide ${i + 1}`}
+                  className="relative h-1 overflow-hidden rounded-full bg-slate-200 transition-all"
                   style={{ width: i === active ? 56 : 20 }}
                 >
                   {i === active && (
@@ -595,10 +551,7 @@ export default function BazarShopHero() {
                       initial={{ width: "0%" }}
                       animate={{ width: "100%" }}
                       transition={{
-                        duration:
-                          reducedMotion || loading
-                            ? 0
-                            : SLIDE_DURATION / 1000,
+                        duration: reduced || loading ? 0 : DUR / 1000,
                         ease: "linear",
                       }}
                     />
@@ -608,217 +561,142 @@ export default function BazarShopHero() {
             </div>
 
             <motion.div
-              initial={reducedMotion ? false : { opacity: 0, y: 22 }}
+              initial={reduced ? false : { opacity: 0, y: 22 }}
               animate={ready ? { opacity: 1, y: 0 } : {}}
               transition={{ duration: 0.8, delay: 0.35, ease: EASE }}
-              className="mt-9 flex flex-col gap-3 sm:flex-row"
+              className="mt-8 flex flex-col gap-3 sm:flex-row"
             >
               <a
                 href="#applications"
-                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#102653] px-6 py-3 font-semibold text-white shadow-lg shadow-blue-950/20 transition hover:-translate-y-0.5 hover:bg-blue-900 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-300"
+                className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#102653] px-6 py-3 font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-blue-900"
               >
-                Découvrir les applications
-                <LuArrowRight
+                Découvrir
+                <ArrowRight
                   size={18}
                   className="transition-transform group-hover:translate-x-1"
                 />
               </a>
+
               <a
                 href="#applications"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-6 py-3 font-semibold text-[#102653] backdrop-blur transition hover:border-blue-200 hover:bg-blue-50 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-200"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-6 py-3 font-semibold text-[#102653]"
               >
-                Explorer le catalogue
-                <LuArrowDown size={17} />
+                Explorer
+                <ArrowDown size={17} />
               </a>
-            </motion.div>
-
-            <motion.div
-              initial={reducedMotion ? false : { opacity: 0 }}
-              animate={ready ? { opacity: 1 } : {}}
-              transition={{ duration: 0.8, delay: 0.55 }}
-              className="mt-8 flex items-center gap-3 text-sm text-slate-500"
-            >
-              <span className="flex -space-x-2" aria-hidden="true">
-                {["📱", "✨", "🚀"].map((e, i) => (
-                  <motion.span
-                    key={i}
-                    className="grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-blue-50 text-xs"
-                    animate={reducedMotion ? {} : { y: [0, -4, 0] }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                      delay: i * 0.28,
-                    }}
-                  >
-                    {e}
-                  </motion.span>
-                ))}
-              </span>
-              <span>Des applis à découvrir, en quelques clics.</span>
             </motion.div>
           </div>
 
-          {/* ================= Colonne visuelle ================= */}
-          <div className="relative mx-auto flex h-[480px] w-full max-w-[540px] items-center justify-center sm:h-[560px]">
+          {/* Visuel */}
+          <div className="relative mx-auto flex h-[460px] w-full max-w-[540px] items-center justify-center sm:h-[540px]">
             <motion.div
-              aria-hidden="true"
-              className="absolute h-[340px] w-[340px] rounded-full border border-blue-100 sm:h-[420px] sm:w-[420px]"
-              animate={reducedMotion ? {} : { rotate: 360 }}
+              aria-hidden
+              className="absolute h-[320px] w-[320px] rounded-full border border-blue-100 sm:h-[400px] sm:w-[400px]"
+              animate={reduced ? {} : { rotate: 360 }}
               transition={{ duration: 48, repeat: Infinity, ease: "linear" }}
             />
+
             <motion.div
-              aria-hidden="true"
-              className="absolute h-[280px] w-[280px] rounded-full border border-dashed border-indigo-200 sm:h-[350px] sm:w-[350px]"
-              animate={reducedMotion ? {} : { rotate: -360 }}
+              aria-hidden
+              className="absolute h-[260px] w-[260px] rounded-full border border-dashed border-indigo-200 sm:h-[330px] sm:w-[330px]"
+              animate={reduced ? {} : { rotate: -360 }}
               transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-            />
-            <motion.div
-              aria-hidden="true"
-              className="absolute h-[300px] w-[300px] rounded-full bg-blue-400/25 blur-[80px] sm:h-[360px] sm:w-[360px]"
-              animate={
-                reducedMotion
-                  ? {}
-                  : { scale: [1, 1.15, 1], opacity: [0.45, 0.8, 0.45] }
-              }
-              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             />
 
             <motion.div
               initial={
-                reducedMotion
+                reduced
                   ? false
                   : { opacity: 0, y: 40, rotate: 6, scale: 0.88 }
               }
               animate={
                 ready
-                  ? reducedMotion
+                  ? reduced
                     ? { opacity: 1 }
-                    : { opacity: 1, y: [0, -9, 0], rotate: 0, scale: 1 }
-                  : reducedMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, y: 40, rotate: 6, scale: 0.88 }
+                    : { opacity: 1, y: [0, -8, 0], rotate: 0, scale: 1 }
+                  : { opacity: 0 }
               }
               transition={
-                reducedMotion
+                reduced
                   ? { duration: 0.2 }
                   : {
                       opacity: { duration: 0.9, delay: 0.25, ease: EASE },
-                      rotate: { duration: 0.9, delay: 0.25, ease: EASE },
                       scale: { duration: 0.9, delay: 0.25, ease: EASE },
-                      y: {
-                        duration: 6.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                      },
+                      rotate: { duration: 0.9, delay: 0.25, ease: EASE },
+                      y: { duration: 6, repeat: Infinity, ease: "easeInOut" },
                     }
               }
-              className="relative z-10 h-[370px] w-[190px] rounded-[2.5rem] border-[7px] border-[#102653] bg-[#102653] p-2 shadow-[0_35px_90px_rgba(16,38,83,0.3)] sm:h-[440px] sm:w-[220px]"
+              className="relative z-10 h-[360px] w-[185px] rounded-[2.5rem] border-[7px] border-[#102653] bg-[#102653] p-2 shadow-[0_35px_90px_rgba(16,38,83,0.3)] sm:h-[420px] sm:w-[210px]"
             >
-              <div className="relative h-full overflow-hidden rounded-[1.9rem] bg-gradient-to-b from-blue-50 via-white to-indigo-50">
-                <div className="mx-auto mt-2 h-4 w-16 rounded-full bg-[#102653]" />
+              <div className="flex h-full flex-col rounded-[1.9rem] bg-gradient-to-b from-blue-50 via-white to-indigo-50 p-3">
+                <div className="mx-auto h-4 w-16 rounded-full bg-[#102653]" />
 
-                <div className="px-3 pt-7">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-600">
-                    Bazar Shop
-                  </p>
-                  <p className="mt-2 text-xl font-extrabold leading-tight text-[#102653]">
-                    Le meilleur
-                    <br />
-                    de vos applis.
-                  </p>
+                <p className="mt-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-blue-600">
+                  Bazar Shop
+                </p>
+                <p className="mt-1 text-lg font-extrabold leading-tight text-[#102653]">
+                  Le meilleur
+                  <br />
+                  de vos applis.
+                </p>
 
-                  <motion.div
-                    className="mt-4 rounded-2xl bg-white p-3 shadow-sm"
-                    initial={reducedMotion ? false : { opacity: 0, y: 12 }}
-                    animate={ready ? { opacity: 1, y: 0 } : {}}
-                    transition={{ duration: 0.7, delay: 0.65, ease: EASE }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-                        ✦
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-800">
-                          Bazar Connect
-                        </p>
-                        <p className="text-[8px] text-slate-500">
-                          Communiquez facilement
-                        </p>
-                      </div>
+                <div className="mt-4 rounded-xl bg-white p-2.5 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+                      ✦
                     </div>
-                    <div className="mt-3 h-2 rounded-full bg-slate-100" />
-                    <div className="mt-1.5 h-2 w-2/3 rounded-full bg-slate-100" />
-                    <div className="mt-3 rounded-lg bg-[#102653] py-2 text-center text-[9px] font-semibold text-white">
-                      Découvrir l’appli
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-800">
+                        Bazar Connect
+                      </p>
+                      <p className="text-[8px] text-slate-500">
+                        Communiquez facilement
+                      </p>
                     </div>
-                  </motion.div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {apps.slice(1).map((app, i) => (
-                      <motion.div
-                        key={app.name}
-                        className="rounded-xl bg-white p-2 shadow-sm"
-                        initial={reducedMotion ? false : { opacity: 0, y: 10 }}
-                        animate={ready ? { opacity: 1, y: 0 } : {}}
-                        transition={{
-                          duration: 0.6,
-                          delay: 0.85 + i * 0.12,
-                          ease: EASE,
-                        }}
-                      >
-                        <div
-                          className={`grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br ${app.color} text-xs text-white`}
-                        >
-                          {app.icon}
-                        </div>
-                        <p className="mt-2 truncate text-[9px] font-bold text-slate-800">
-                          {app.name}
-                        </p>
-                        <p className="mt-0.5 text-[8px] text-slate-500">
-                          {app.category}
-                        </p>
-                      </motion.div>
-                    ))}
+                  </div>
+                  <div className="mt-2 h-1.5 rounded-full bg-slate-100" />
+                  <div className="mt-1 h-1.5 w-2/3 rounded-full bg-slate-100" />
+                  <div className="mt-2 rounded-md bg-[#102653] py-1.5 text-center text-[8px] font-semibold text-white">
+                    Découvrir
                   </div>
                 </div>
 
-                <div className="absolute bottom-3 left-1/2 h-1 w-14 -translate-x-1/2 rounded-full bg-[#102653]/25" />
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  {apps.slice(1).map((a) => (
+                    <div
+                      key={a.name}
+                      className="rounded-lg bg-white p-1.5 shadow-sm"
+                    >
+                      <div
+                        className={`grid h-6 w-6 place-items-center rounded-md bg-gradient-to-br ${a.color} text-[10px] text-white`}
+                      >
+                        {a.icon}
+                      </div>
+                      <p className="mt-1 truncate text-[8px] font-bold text-slate-800">
+                        {a.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
 
-            {/* Cartes flottantes avec Tilt 3D */}
             {ready && (
               <>
-                <FloatingAppCard
+                <TiltCard
                   app={apps[0]}
                   className="left-0 top-14 sm:left-2 sm:top-16"
                   delay={0.5}
-                  reducedMotion={reducedMotion}
+                  reduced={reduced}
                 />
-                <FloatingAppCard
+                <TiltCard
                   app={apps[1]}
                   className="bottom-12 right-0 sm:bottom-14 sm:right-2"
                   delay={0.75}
-                  reducedMotion={reducedMotion}
+                  reduced={reduced}
                 />
               </>
             )}
-
-            <motion.div
-              className="absolute right-7 top-6 grid h-12 w-12 place-items-center rounded-2xl border border-white bg-white/90 text-blue-700 shadow-lg sm:right-12 sm:top-8"
-              animate={
-                reducedMotion ? {} : { y: [0, -10, 0], rotate: [0, 8, 0] }
-              }
-              transition={{
-                duration: 4.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              aria-hidden="true"
-            >
-              <LuSparkles size={21} />
-            </motion.div>
           </div>
         </div>
       </motion.section>
