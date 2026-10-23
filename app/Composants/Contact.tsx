@@ -29,19 +29,19 @@ import { FaWhatsapp } from "react-icons/fa";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-const WHATSAPP_NUMBER = "6502348574"; // sans + ni espaces
+const WHATSAPP_NUMBER = "6502348574";
 const WHATSAPP_MESSAGE = encodeURIComponent(
   "Bonjour Bazar Shop, je vous contacte depuis votre site."
 );
 
 const containerVariants: Variants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.07, delayChildren: 0.05 } },
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
 };
 
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: EASE } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE } },
 };
 
 /* ------------------------------------------------------------------ */
@@ -63,7 +63,6 @@ function WhatsAppButton({ reduced }: { reduced: boolean | null }) {
       style={{ y }}
       className="fixed bottom-6 right-5 z-[90] flex flex-col items-end gap-2 sm:bottom-8 sm:right-8"
     >
-      {/* Petit label animé au survol */}
       <AnimatePresence>
         {hover && (
           <motion.span
@@ -89,7 +88,6 @@ function WhatsAppButton({ reduced }: { reduced: boolean | null }) {
         whileTap={reduced ? {} : { scale: 0.95 }}
         className="relative grid h-14 w-14 place-items-center rounded-full bg-[#25D366] text-white shadow-[0_15px_40px_rgba(37,211,102,0.45)]"
       >
-        {/* Halo pulsé */}
         {!reduced && (
           <motion.span
             aria-hidden
@@ -98,11 +96,9 @@ function WhatsAppButton({ reduced }: { reduced: boolean | null }) {
             transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut" }}
           />
         )}
-
         <FaWhatsapp size={26} className="relative" />
       </motion.a>
 
-      {/* Texte sous le bouton */}
       <span className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-semibold text-[#102653] shadow-sm ring-1 ring-slate-200 backdrop-blur">
         Contactez-nous
       </span>
@@ -111,7 +107,7 @@ function WhatsAppButton({ reduced }: { reduced: boolean | null }) {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Champ de formulaire                                                */
+/*  Champ avec label flottant + focus animé                            */
 /* ------------------------------------------------------------------ */
 
 function Field({
@@ -124,6 +120,7 @@ function Field({
   onChange,
   error,
   textarea,
+  reduced,
 }: {
   id: string;
   label: string;
@@ -134,34 +131,43 @@ function Field({
   onChange: (v: string) => void;
   error?: string;
   textarea?: boolean;
+  reduced: boolean | null;
 }) {
   const [focused, setFocused] = useState(false);
+  const active = focused || value.length > 0;
 
-  const base =
-    "w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400";
-  const state = error
-    ? "border-rose-300 focus:border-rose-500"
+  const border = error
+    ? "border-rose-300"
     : focused
       ? "border-blue-500"
-      : "border-slate-200 hover:border-slate-300";
+      : "border-slate-200 group-hover:border-slate-300";
 
   return (
-    <div>
+    <div className="group">
       <label
         htmlFor={id}
-        className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-500"
+        className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500"
       >
+        <motion.span
+          animate={
+            reduced
+              ? {}
+              : { color: active ? "#2563eb" : "#64748b", scale: active ? 1.05 : 1 }
+          }
+          transition={{ duration: 0.25 }}
+          className="inline-flex"
+        >
+          <Icon size={12} />
+        </motion.span>
         {label}
+        {error && (
+          <span className="ml-auto text-[10px] font-medium normal-case tracking-normal text-rose-600">
+            {error}
+          </span>
+        )}
       </label>
 
       <div className="relative">
-        <Icon
-          size={16}
-          className={`pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${
-            focused ? "text-blue-600" : "text-slate-400"
-          }`}
-        />
-
         {textarea ? (
           <textarea
             id={id}
@@ -171,7 +177,7 @@ function Field({
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder={placeholder}
-            className={`${base} ${state} resize-none pl-10`}
+            className={`peer w-full resize-none rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 ${border}`}
           />
         ) : (
           <input
@@ -182,24 +188,20 @@ function Field({
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             placeholder={placeholder}
-            className={`${base} ${state} pl-10`}
+            className={`peer w-full rounded-xl border bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 ${border}`}
           />
         )}
-      </div>
 
-      <AnimatePresence>
-        {error && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="mt-1 text-xs font-medium text-rose-600"
-          >
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
+        {/* Barre de focus en bas du champ */}
+        <motion.span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500"
+          initial={false}
+          animate={{ scaleX: focused ? 1 : 0, opacity: focused ? 1 : 0 }}
+          transition={{ duration: 0.3, ease: EASE }}
+          style={{ transformOrigin: "left" }}
+        />
+      </div>
     </div>
   );
 }
@@ -220,7 +222,6 @@ export default function Contact() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
 
-  /* Verrouille le scroll du body pendant l'envoi (optionnel) */
   useEffect(() => {
     if (status === "sent") {
       const t = setTimeout(() => setStatus("idle"), 4000);
@@ -235,13 +236,12 @@ export default function Contact() {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.name.trim()) e.name = "Nom requis.";
-    if (!form.email.trim()) e.email = "Email requis.";
+    if (!form.name.trim()) e.name = "Requis";
+    if (!form.email.trim()) e.email = "Requis";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      e.email = "Email invalide.";
-    if (!form.subject.trim()) e.subject = "Sujet requis.";
-    if (form.message.trim().length < 10)
-      e.message = "Message trop court (10 caractères min.).";
+      e.email = "Invalide";
+    if (!form.subject.trim()) e.subject = "Requis";
+    if (form.message.trim().length < 10) e.message = "10 car. min.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -257,219 +257,263 @@ export default function Contact() {
   };
 
   return (
-    <main className="relative min-h-screen bg-white text-slate-900">
-      {/* Bandeau haut discret */}
-      <div className="border-b border-slate-100 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-10">
-          <div className="flex items-center gap-2">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-sm text-white">
-              ✦
-            </span>
-            <span className="text-sm font-extrabold text-[#102653]">
-              Bazar Shop
-            </span>
-          </div>
-          <span className="text-xs font-medium text-slate-500">
-            Contact
-          </span>
-        </div>
-      </div>
+    <main className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900">
+      {/* ============ Décor de fond ============ */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(60% 50% at 15% 0%, rgba(219,234,254,0.9) 0%, transparent 60%), radial-gradient(50% 50% at 90% 10%, rgba(224,231,255,0.75) 0%, transparent 60%), radial-gradient(70% 60% at 50% 100%, rgba(226,232,240,0.9) 0%, transparent 60%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10 opacity-[0.04] [background-image:radial-gradient(#102653_1px,transparent_1px)] [background-size:28px_28px]"
+      />
 
       {/* ============ En-tête ============ */}
-      <section className="mx-auto max-w-3xl px-6 pb-12 pt-16 text-center lg:px-10">
+      <section className="mx-auto max-w-6xl px-6 pb-10 pt-20 text-center lg:px-10">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
         >
-          <motion.p
+          <motion.span
             variants={itemVariants}
-            className="mb-3 text-xs font-semibold uppercase tracking-[0.24em] text-blue-600"
+            className="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-blue-700 shadow-sm"
           >
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
             Contact
-          </motion.p>
+          </motion.span>
 
           <motion.h1
             variants={itemVariants}
-            className="text-4xl font-extrabold leading-tight tracking-tight text-[#102653] sm:text-5xl"
+            className="text-4xl font-extrabold leading-[1.1] tracking-tight text-[#102653] sm:text-5xl lg:text-6xl"
           >
             Une question ?
             <br />
-            <span className="bg-gradient-to-r from-blue-700 to-indigo-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-700 via-indigo-600 to-sky-500 bg-clip-text text-transparent">
               Nous sommes là.
             </span>
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
-            className="mx-auto mt-5 max-w-xl text-base leading-7 text-slate-600 sm:text-lg"
+            className="mx-auto mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg"
           >
             Écrivez-nous via le formulaire ou discutez directement sur
-            WhatsApp. Réponse humaine sous 24 h ouvrées.
+            WhatsApp. Réponse humaine sous 24&nbsp;h ouvrées.
           </motion.p>
         </motion.div>
       </section>
 
       {/* ============ Formulaire + coordonnées ============ */}
-      <section className="mx-auto max-w-7xl px-6 pb-24 lg:px-10">
-        <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
-          {/* Formulaire */}
+      <section className="mx-auto max-w-6xl px-6 pb-28 lg:px-10">
+        <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+          {/* ---------- Formulaire en verre ---------- */}
           <motion.form
             onSubmit={onSubmit}
             initial={reduced ? false : { opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, ease: EASE }}
-            className="rounded-3xl border border-slate-100 bg-white p-6 shadow-[0_20px_60px_rgba(15,35,80,0.06)] sm:p-8"
+            className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_25px_70px_-20px_rgba(15,35,80,0.20)] backdrop-blur-xl sm:p-9"
           >
-            <h2 className="text-lg font-bold text-[#102653] sm:text-xl">
-              Envoyez-nous un message
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Tous les champs sont requis.
-            </p>
+            {/* Halo décoratif interne */}
+            <motion.span
+              aria-hidden
+              className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full bg-blue-200/50 blur-3xl"
+              animate={
+                reduced ? {} : { scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }
+              }
+              transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+            />
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Field
-                id="name"
-                label="Nom"
-                placeholder="Votre nom"
-                icon={LuUser}
-                value={form.name}
-                onChange={setField("name")}
-                error={errors.name}
-              />
-              <Field
-                id="email"
-                label="Email"
-                type="email"
-                placeholder="vous@exemple.com"
-                icon={LuMail}
-                value={form.email}
-                onChange={setField("email")}
-                error={errors.email}
-              />
-            </div>
+            <div className="relative">
+              <div className="mb-8 flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl font-extrabold tracking-tight text-[#102653] sm:text-2xl">
+                    Envoyez-nous un message
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Tous les champs sont requis.
+                  </p>
+                </div>
+                <span className="hidden shrink-0 rounded-full bg-blue-50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-blue-700 sm:inline-flex">
+                  ~24h
+                </span>
+              </div>
 
-            <div className="mt-4">
-              <Field
-                id="subject"
-                label="Sujet"
-                placeholder="Le sujet de votre message"
-                icon={LuMessageCircle}
-                value={form.subject}
-                onChange={setField("subject")}
-                error={errors.subject}
-              />
-            </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field
+                  id="name"
+                  label="Nom"
+                  placeholder="Votre nom"
+                  icon={LuUser}
+                  value={form.name}
+                  onChange={setField("name")}
+                  error={errors.name}
+                  reduced={reduced}
+                />
+                <Field
+                  id="email"
+                  label="Email"
+                  type="email"
+                  placeholder="vous@exemple.com"
+                  icon={LuMail}
+                  value={form.email}
+                  onChange={setField("email")}
+                  error={errors.email}
+                  reduced={reduced}
+                />
+              </div>
 
-            <div className="mt-4">
-              <Field
-                id="message"
-                label="Message"
-                placeholder="Écrivez votre message…"
-                icon={LuSend}
-                value={form.message}
-                onChange={setField("message")}
-                error={errors.message}
-                textarea
-              />
-            </div>
+              <div className="mt-4">
+                <Field
+                  id="subject"
+                  label="Sujet"
+                  placeholder="Le sujet de votre message"
+                  icon={LuMessageCircle}
+                  value={form.subject}
+                  onChange={setField("subject")}
+                  error={errors.subject}
+                  reduced={reduced}
+                />
+              </div>
 
-            <motion.button
-              type="submit"
-              disabled={status === "sending"}
-              whileHover={reduced || status === "sending" ? {} : { y: -1 }}
-              whileTap={reduced ? {} : { scale: 0.99 }}
-              className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#102653] px-6 font-semibold text-white transition-colors hover:bg-blue-900 disabled:opacity-90"
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                {status === "sending" ? (
+              <div className="mt-4">
+                <Field
+                  id="message"
+                  label="Message"
+                  placeholder="Écrivez votre message…"
+                  icon={LuSend}
+                  value={form.message}
+                  onChange={setField("message")}
+                  error={errors.message}
+                  textarea
+                  reduced={reduced}
+                />
+              </div>
+
+              {/* Bouton */}
+              <motion.button
+                type="submit"
+                disabled={status === "sending"}
+                whileHover={reduced || status === "sending" ? {} : { y: -2 }}
+                whileTap={reduced ? {} : { scale: 0.99 }}
+                className="group relative mt-7 flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-[#102653] px-6 font-semibold text-white shadow-lg shadow-blue-950/25 transition-colors hover:bg-blue-900 disabled:opacity-90"
+              >
+                {/* Halo animé sur le bouton */}
+                {!reduced && status === "idle" && (
                   <motion.span
-                    key="sending"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-2"
-                  >
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-r from-blue-700/0 via-blue-700/40 to-blue-700/0"
+                    animate={{ x: ["-100%", "200%"] }}
+                    transition={{
+                      duration: 2.2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      repeatDelay: 1.6,
+                    }}
+                  />
+                )}
+
+                <AnimatePresence mode="wait" initial={false}>
+                  {status === "sending" ? (
                     <motion.span
-                      animate={reduced ? {} : { rotate: 360 }}
-                      transition={{
-                        duration: 0.9,
-                        repeat: Infinity,
-                        ease: "linear",
-                      }}
-                      className="inline-flex"
+                      key="sending"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="relative flex items-center gap-2"
                     >
-                      <LuLoader size={18} />
+                      <motion.span
+                        animate={reduced ? {} : { rotate: 360 }}
+                        transition={{
+                          duration: 0.9,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
+                        className="inline-flex"
+                      >
+                        <LuLoader size={18} />
+                      </motion.span>
+                      Envoi en cours…
                     </motion.span>
-                    Envoi…
-                  </motion.span>
-                ) : status === "sent" ? (
-                  <motion.span
-                    key="sent"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                  ) : status === "sent" ? (
+                    <motion.span
+                      key="sent"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="relative flex items-center gap-2"
+                    >
+                      <LuCheck size={18} />
+                      Message envoyé
+                    </motion.span>
+                  ) : (
+                    <motion.span
+                      key="idle"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="relative flex items-center gap-2"
+                    >
+                      Envoyer
+                      <LuArrowRight
+                        size={18}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </motion.button>
+
+              <AnimatePresence>
+                {status === "sent" && (
+                  <motion.p
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center gap-2"
+                    className="mt-3 text-center text-xs font-medium text-emerald-700"
                   >
-                    <LuCheck size={18} />
-                    Message envoyé
-                  </motion.span>
-                ) : (
-                  <motion.span
-                    key="idle"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-2"
-                  >
-                    Envoyer
-                    <LuArrowRight size={18} />
-                  </motion.span>
+                    Merci&nbsp;! Nous vous répondons sous 24&nbsp;h ouvrées.
+                  </motion.p>
                 )}
               </AnimatePresence>
-            </motion.button>
-
-            <AnimatePresence>
-              {status === "sent" && (
-                <motion.p
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-3 text-center text-xs text-emerald-700"
-                >
-                  Merci ! Nous vous répondons sous 24 h ouvrées.
-                </motion.p>
-              )}
-            </AnimatePresence>
+            </div>
           </motion.form>
 
-          {/* Coordonnées */}
-          <div className="flex flex-col gap-4">
+          {/* ---------- Colonne coordonnées ---------- */}
+          <div className="flex flex-col gap-3">
             {[
               {
                 icon: LuMail,
                 label: "Email",
                 value: "contact@bazarshop.com",
                 href: "mailto:contact@bazarshop.com",
+                color: "from-blue-500 to-indigo-600",
               },
               {
                 icon: LuPhone,
                 label: "Téléphone",
                 value: "+237 650 23 48 574",
                 href: "tel:+2376502348574",
+                color: "from-cyan-500 to-blue-600",
               },
               {
                 icon: LuMapPin,
                 label: "Adresse",
                 value: "Douala, Cameroun",
                 href: "#",
+                color: "from-violet-500 to-fuchsia-600",
               },
               {
                 icon: LuClock,
                 label: "Horaires",
                 value: "Lun – Ven · 9h – 18h",
                 href: "#",
+                color: "from-amber-400 to-orange-500",
               },
             ].map((info, i) => {
               const Icon = info.icon;
@@ -479,26 +523,36 @@ export default function Contact() {
                   href={info.href}
                   initial={reduced ? false : { opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.6, delay: 0.15 + i * 0.08, ease: EASE }}
-                  whileHover={reduced ? {} : { x: 2 }}
-                  className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_8px_30px_rgba(15,35,80,0.04)] transition-shadow hover:shadow-[0_15px_40px_rgba(15,35,80,0.08)]"
+                  transition={{
+                    duration: 0.6,
+                    delay: 0.15 + i * 0.08,
+                    ease: EASE,
+                  }}
+                  whileHover={reduced ? {} : { y: -2 }}
+                  className="group flex items-center gap-3 rounded-2xl border border-white/70 bg-white/80 p-4 shadow-[0_8px_30px_-10px_rgba(15,35,80,0.10)] backdrop-blur transition-shadow hover:shadow-[0_18px_40px_-15px_rgba(15,35,80,0.18)]"
                 >
-                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700">
+                  <div
+                    className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gradient-to-br ${info.color} text-white shadow-md`}
+                  >
                     <Icon size={18} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       {info.label}
                     </p>
                     <p className="mt-0.5 truncate text-sm font-semibold text-[#102653]">
                       {info.value}
                     </p>
                   </div>
+                  <LuArrowRight
+                    size={15}
+                    className="ml-auto text-slate-300 transition-all group-hover:translate-x-0.5 group-hover:text-slate-500"
+                  />
                 </motion.a>
               );
             })}
 
-            {/* Bloc WhatsApp dans la colonne */}
+            {/* Bloc WhatsApp */}
             <motion.a
               href={`https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`}
               target="_blank"
@@ -507,13 +561,13 @@ export default function Contact() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5, ease: EASE }}
               whileHover={reduced ? {} : { y: -2 }}
-              className="group flex items-center gap-4 rounded-2xl border border-[#25D366]/30 bg-[#25D366]/5 p-4 transition-colors hover:bg-[#25D366]/10"
+              className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-[#25D366]/30 bg-gradient-to-br from-[#25D366]/10 to-[#128C7E]/10 p-4 transition-colors hover:from-[#25D366]/15 hover:to-[#128C7E]/15"
             >
-              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white shadow-md shadow-[#25D366]/30">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#25D366] text-white shadow-md shadow-[#25D366]/40">
                 <FaWhatsapp size={22} />
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#128C7E]">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#128C7E]">
                   WhatsApp
                 </p>
                 <p className="mt-0.5 text-sm font-semibold text-[#102653]">
@@ -521,8 +575,8 @@ export default function Contact() {
                 </p>
               </div>
               <LuArrowRight
-                size={16}
-                className="ml-auto text-[#25D366] transition-transform group-hover:translate-x-1"
+                size={15}
+                className="ml-auto text-[#25D366] transition-transform group-hover:translate-x-0.5"
               />
             </motion.a>
           </div>
