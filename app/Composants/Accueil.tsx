@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AnimatePresence,
   motion,
+  useMotionValue,
   useReducedMotion,
+  useSpring,
+  useTransform,
   type Variants,
 } from "motion/react";
 import {
@@ -123,7 +126,6 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
   const reducedMotion = useReducedMotion();
   const [progress, setProgress] = useState(0);
 
-  /* Progression simulée + verrouillage sur le chargement réel */
   useEffect(() => {
     let raf = 0;
     let mounted = true;
@@ -141,7 +143,6 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
     };
     raf = requestAnimationFrame(tick);
 
-    /* Attendre à la fois la durée mini ET le vrai chargement du document */
     const finish = () => {
       if (!mounted) return;
       setProgress(100);
@@ -177,7 +178,6 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
       }
       transition={{ duration: reducedMotion ? 0.2 : 0.7, ease: EASE }}
     >
-      {/* Décor de fond */}
       <motion.div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
@@ -194,7 +194,6 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
         }}
       />
 
-      {/* Logo animé */}
       <div className="relative mb-10 flex items-center justify-center">
         <motion.span
           className="absolute h-24 w-24 rounded-full border border-blue-200"
@@ -219,7 +218,6 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
         </motion.div>
       </div>
 
-      {/* Nom */}
       <motion.p
         className="mb-1 text-lg font-extrabold tracking-tight text-[#102653]"
         initial={reducedMotion ? false : { opacity: 0, y: 10 }}
@@ -237,7 +235,6 @@ function LoadingScreen({ onDone }: { onDone: () => void }) {
         Chargement
       </motion.p>
 
-      {/* Barre de progression */}
       <div className="relative h-1 w-56 overflow-hidden rounded-full bg-slate-200">
         <motion.div
           className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500"
@@ -282,8 +279,45 @@ function AnimatedWords({
 }
 
 /* ================================================================== */
-/*  Carte flottante                                                    */
+/*  TILT CARD — inclinaison 3D suivant la souris                       */
 /* ================================================================== */
+
+function useTilt(reducedMotion: boolean | null, strength = 14) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  /* Positions normalisées de la souris : -0.5 → 0.5 */
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  /* Ressort pour un retour fluide quand la souris sort */
+  const springConfig = { stiffness: 220, damping: 20, mass: 0.6 };
+  const rotateX = useSpring(
+    useTransform(y, [-0.5, 0.5], [strength, -strength]),
+    springConfig
+  );
+  const rotateY = useSpring(
+    useTransform(x, [-0.5, 0.5], [-strength, strength]),
+    springConfig
+  );
+
+  /* Reflet lumineux qui suit le curseur */
+  const glareX = useTransform(x, [-0.5, 0.5], ["25%", "75%"]);
+  const glareY = useTransform(y, [-0.5, 0.5], ["25%", "75%"]);
+
+  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (reducedMotion || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    x.set((e.clientX - rect.left) / rect.width - 0.5);
+    y.set((e.clientY - rect.top) / rect.height - 0.5);
+  };
+
+  const onMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return { ref, rotateX, rotateY, glareX, glareY, onMouseMove, onMouseLeave };
+}
 
 function FloatingAppCard({
   app,
@@ -296,6 +330,16 @@ function FloatingAppCard({
   delay?: number;
   reducedMotion: boolean | null;
 }) {
+  const {
+    ref,
+    rotateX,
+    rotateY,
+    glareX,
+    glareY,
+    onMouseMove,
+    onMouseLeave,
+  } = useTilt(reducedMotion);
+
   return (
     <motion.div
       className={`absolute ${className}`}
@@ -319,24 +363,60 @@ function FloatingAppCard({
               },
             }
       }
+      style={{ perspective: 800 }}
     >
-      <div className="group w-44 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-[0_18px_55px_rgba(15,35,80,0.15)] backdrop-blur-xl transition-transform duration-300 hover:-translate-y-1 hover:shadow-[0_24px_60px_rgba(15,35,80,0.22)] sm:w-48">
-        <div
-          className={`mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${app.color} text-xl text-white shadow-md`}
+      {/* Wrapper tilt — capte la souris sans interférer avec l'animation flottante */}
+      <motion.div
+        ref={ref}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
+        style={{
+          rotateX,
+          rotateY,
+          transformPerspective: 800,
+          transformStyle: "preserve-3d",
+        }}
+        className="group relative w-44 rounded-2xl border border-white/70 bg-white/90 p-3 shadow-[0_18px_55px_rgba(15,35,80,0.15)] backdrop-blur-xl transition-shadow duration-300 hover:shadow-[0_28px_70px_rgba(15,35,80,0.28)] sm:w-48"
+      >
+        {/* Reflet dynamique */}
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         >
-          {app.icon}
+          <motion.div
+            className="absolute -inset-1"
+            style={{
+              background: useTransform(
+                [glareX, glareY],
+                ([gx, gy]) =>
+                  `radial-gradient(circle at ${gx} ${gy}, rgba(255,255,255,0.65) 0%, transparent 55%)`
+              ),
+            }}
+          />
+        </motion.div>
+
+        {/* Contenu en profondeur (translateZ pour détacher les éléments) */}
+        <div
+          style={{ transform: "translateZ(28px)", transformStyle: "preserve-3d" }}
+          className="relative"
+        >
+          <div
+            className={`mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br ${app.color} text-xl text-white shadow-md`}
+          >
+            {app.icon}
+          </div>
+          <p className="text-sm font-bold text-slate-900">{app.name}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{app.category}</p>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <span className="text-[11px] text-slate-500">
+              {app.description}
+            </span>
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-700 transition-colors group-hover:bg-blue-100">
+              <LuDownload size={13} />
+            </span>
+          </div>
         </div>
-        <p className="text-sm font-bold text-slate-900">{app.name}</p>
-        <p className="mt-0.5 text-xs text-slate-500">{app.category}</p>
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="text-[11px] text-slate-500">
-            {app.description}
-          </span>
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-blue-50 text-blue-700 transition-colors group-hover:bg-blue-100">
-            <LuDownload size={13} />
-          </span>
-        </div>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
@@ -354,7 +434,6 @@ export default function BazarShopHero() {
 
   const SLIDE_DURATION = 5200;
 
-  /* Rotation auto du diaporama */
   useEffect(() => {
     if (reducedMotion || paused || loading) return;
     const id = setTimeout(
@@ -368,24 +447,23 @@ export default function BazarShopHero() {
 
   return (
     <>
-      {/* ================= LOADER ================= */}
       <AnimatePresence>
         {loading && <LoadingScreen onDone={() => setLoading(false)} />}
       </AnimatePresence>
 
-      {/* ================= CONTENU ================= */}
       <motion.section
         className="relative isolate flex min-h-[760px] items-center overflow-hidden bg-white text-slate-900"
         onMouseEnter={() => setPaused(true)}
         onMouseLeave={() => setPaused(false)}
         initial={false}
-        animate={loading ? { opacity: 0, scale: 0.985 } : { opacity: 1, scale: 1 }}
+        animate={
+          loading ? { opacity: 0, scale: 0.985 } : { opacity: 1, scale: 1 }
+        }
         transition={{ duration: reducedMotion ? 0.2 : 0.9, ease: EASE }}
         onAnimationComplete={() => {
           if (!loading) setReady(true);
         }}
       >
-        {/* ============ Décor de fond animé ============ */}
         <motion.div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 -z-10"
@@ -407,7 +485,6 @@ export default function BazarShopHero() {
           className="pointer-events-none absolute inset-0 -z-10 opacity-[0.04] [background-image:radial-gradient(#102653_1px,transparent_1px)] [background-size:26px_26px]"
         />
 
-        {/* Halo coloré contextuel */}
         <AnimatePresence>
           <motion.div
             key={`glow-${active}`}
@@ -424,7 +501,6 @@ export default function BazarShopHero() {
         <div className="mx-auto grid w-full max-w-7xl items-center gap-14 px-6 py-20 lg:grid-cols-[1.05fr_1fr] lg:px-10">
           {/* ================= Colonne texte ================= */}
           <div className="relative z-10 max-w-xl">
-            {/* Badge */}
             <motion.div
               initial={reducedMotion ? false : { opacity: 0, y: 16 }}
               animate={ready ? { opacity: 1, y: 0 } : {}}
@@ -449,7 +525,6 @@ export default function BazarShopHero() {
               Vos prochaines applications préférées
             </motion.div>
 
-            {/* ---- Zone diaporama ---- */}
             <div className="relative min-h-[280px] sm:min-h-[320px] lg:min-h-[360px]">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -490,7 +565,6 @@ export default function BazarShopHero() {
               </AnimatePresence>
             </div>
 
-            {/* Description */}
             <motion.p
               initial={reducedMotion ? false : { opacity: 0, y: 18 }}
               animate={ready ? { opacity: 1, y: 0 } : {}}
@@ -502,7 +576,6 @@ export default function BazarShopHero() {
               simplifier la vie.
             </motion.p>
 
-            {/* Indicateurs */}
             <div className="mt-7 flex items-center gap-2.5" aria-hidden="true">
               {slides.map((_, i) => (
                 <button
@@ -523,7 +596,9 @@ export default function BazarShopHero() {
                       animate={{ width: "100%" }}
                       transition={{
                         duration:
-                          reducedMotion || loading ? 0 : SLIDE_DURATION / 1000,
+                          reducedMotion || loading
+                            ? 0
+                            : SLIDE_DURATION / 1000,
                         ease: "linear",
                       }}
                     />
@@ -532,7 +607,6 @@ export default function BazarShopHero() {
               ))}
             </div>
 
-            {/* Boutons */}
             <motion.div
               initial={reducedMotion ? false : { opacity: 0, y: 22 }}
               animate={ready ? { opacity: 1, y: 0 } : {}}
@@ -558,7 +632,6 @@ export default function BazarShopHero() {
               </a>
             </motion.div>
 
-            {/* Avatars */}
             <motion.div
               initial={reducedMotion ? false : { opacity: 0 }}
               animate={ready ? { opacity: 1 } : {}}
@@ -611,7 +684,6 @@ export default function BazarShopHero() {
               transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
             />
 
-            {/* Smartphone */}
             <motion.div
               initial={
                 reducedMotion
@@ -715,7 +787,7 @@ export default function BazarShopHero() {
               </div>
             </motion.div>
 
-            {/* Cartes flottantes — apparaissent après le hero */}
+            {/* Cartes flottantes avec Tilt 3D */}
             {ready && (
               <>
                 <FloatingAppCard
